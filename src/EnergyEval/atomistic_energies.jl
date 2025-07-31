@@ -194,6 +194,18 @@ function frozen_energy(at::AbstractSystem,
     return energy
 end
 
+"""
+    frozen_energy(at::AbstractSystem, calc::ASECalculator, list_num_par::Vector{Int}, frozen::Vector{Bool})
+
+Dummy implementation for ASE-based potentials that do not yet distinguish
+between frozen and free components.  Always returns zero.
+"""
+function frozen_energy(at::AbstractSystem,
+                       calc::ASECalculator,
+                       list_num_par::Vector{Int},
+                       frozen::Vector{Bool})
+    return 0.0u"eV"
+end
 
 """
     interacting_energy(at::AbstractSystem, ljs::CompositeLJParameters{C}, list_num_par::Vector{Int}, frozen::Vector{Bool})
@@ -428,4 +440,40 @@ function single_site_energy(index::Int,
     end
     external_e = sum(energies_surface)
     return internal_e + external_e
+end
+
+"""
+    single_site_energy(index, system, calc::ASECalculator, list_num_par)
+
+Very rough fallback that returns the total interacting energy of the system
+as an estimate for the contribution of a single site when an ASE calculator is
+used.  This is sufficient for running demo scripts but should be replaced by
+a proper per-atom energy decomposition for production work.
+"""
+function single_site_energy(index::Int,
+                            system::AtomsBase.AbstractSystem,
+                            calc::ASECalculator,
+                            list_num_par::Vector{Int})
+    return interacting_energy(system, calc)
+end
+
+"""
+    interacting_energy(system::AbstractSystem, calc::ASECalculator)
+
+Evaluate total potential energy (eV) of `system` using the wrapped ASE
+calculator.
+"""
+function interacting_energy(system::AtomsBase.AbstractSystem, calc::ASECalculator)
+    py_atoms = AbstractPotentials._to_ase(system)  # reuse helper
+    py_atoms.calc = calc.calc
+    e = py_atoms.get_potential_energy()
+    return pyconvert(Float64, e) * u"eV"
+end
+
+# variant with list_num_par/frozen passed by callers in LJ workflow
+function interacting_energy(system::AtomsBase.AbstractSystem,
+                            calc::ASECalculator,
+                            list_num_par::Vector{Int},
+                            frozen::Vector{Bool})
+    return interacting_energy(system, calc)
 end

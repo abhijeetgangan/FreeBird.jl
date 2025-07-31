@@ -8,6 +8,7 @@ module EnergyEval
 using AtomsBase
 using Unitful
 using StaticArrays
+using PythonCall
 using ..AbstractWalkers
 using ..AbstractPotentials
 using ..AbstractHamiltonians
